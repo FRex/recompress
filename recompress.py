@@ -1,5 +1,6 @@
 import subprocess
 import humanize
+import shlex
 import hashlib
 import sys
 import os
@@ -60,6 +61,16 @@ while True:
 gzjobret = gzipjob.wait()
 zsjobret = zstdjob.wait()
 
+broken = False
+if gzjobret != 0:
+    print(f"{shlex.join(gzipjob.args)} returned non-zero status: {gzjobret}")
+    broken = True
+if zsjobret != 0:
+    print(f"{shlex.join(zstdjob.args)} returned non-zero status: {zsjobret}")
+    broken = True
+
+if broken:
+    sys.exit(1)
 
 okay = check_hashes(digest.hexdigest(), gzfname, zsfname)
 if okay:
