@@ -7,6 +7,11 @@ import time
 import sys
 import os
 
+import blake3
+
+DIGESTCLASS = blake3.blake3
+DIGESTCLASS: object
+
 
 def pretty_filesize(fsize: int) -> str:
     return humanize.naturalsize(fsize, True)
@@ -15,7 +20,7 @@ def pretty_filesize(fsize: int) -> str:
 def getdigest(fname: str) -> str:
     args = ["zstd", "-d", "--stdout", fname]
     with subprocess.Popen(args, stdout=subprocess.PIPE) as job:
-        return hashlib.file_digest(job.stdout, hashlib.sha256).hexdigest()
+        return hashlib.file_digest(job.stdout, DIGESTCLASS).hexdigest()
 
 
 def check_hashes(rawdigest: str, fname1: str, fname2: str) -> bool:
@@ -34,17 +39,17 @@ def check_hashes(rawdigest: str, fname1: str, fname2: str) -> bool:
     return okay
 
 
-gzfname = sys.argv[1]
-
-
 def create_temp_filename(origfname: str) -> str:
     dpath = os.path.split(origfname)[0]
     root = os.path.splitext(origfname)[0]
-
-    randitems = (random.randint(0, 10**9), os.getpid(), origfname, time.time())
-    xx = hashlib.sha512(str(randitems).encode("UTF-8")).hexdigest()[:40]
-    randompart = f".{xx}.temp"
-    return os.path.join(dpath, root + randompart + ".zst")
+    while True:
+        randitems = (random.randint(0, 10**9), os.getpid(), origfname, time.time())
+        xx = DIGESTCLASS(str(randitems).encode("UTF-8")).hexdigest()[:40]
+        randompart = f".{xx}.temp"
+        ret = os.path.join(dpath, root + randompart + ".zst")
+        if os.path.exists(ret):
+            continue
+        return ret
 
 
 def create_goal_filename(origfname: str) -> str:
@@ -52,6 +57,8 @@ def create_goal_filename(origfname: str) -> str:
     root = os.path.splitext(origfname)[0]
     return os.path.join(dpath, root + ".zst")
 
+
+gzfname = sys.argv[1]
 
 finalname = create_goal_filename(gzfname)
 if os.path.exists(finalname):
@@ -62,14 +69,14 @@ if os.path.exists(finalname):
 tempfname = create_temp_filename(gzfname)
 
 
-args = ["zstd", "-d", "--stdout", gzfname]
-gzipjob = subprocess.Popen(args, stdout=subprocess.PIPE)
+args1 = ["zstd", "-d", "--stdout", gzfname]
+gzipjob = subprocess.Popen(args1, stdout=subprocess.PIPE)
 
 
-args = ["zstd", "--quiet", "-o", tempfname]
-zstdjob = subprocess.Popen(args, stdin=subprocess.PIPE)
+args2 = ["zstd", "--quiet", "-o", tempfname]
+zstdjob = subprocess.Popen(args2, stdin=subprocess.PIPE)
 
-digest = hashlib.sha256()
+digest = DIGESTCLASS()
 
 rawsize = 0
 while True:
