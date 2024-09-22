@@ -56,14 +56,15 @@ def check_hashes(rawdigest: str, fname1: str, fname2: str) -> bool:
 def create_temp_filename(origfname: str) -> str:
     dpath = os.path.split(origfname)[0]
     root = os.path.splitext(origfname)[0]
-    while True:
-        randitems = (random.randint(0, 10**9), os.getpid(), origfname, time.time())
-        xx = DIGESTCLASS(str(randitems).encode("UTF-8")).hexdigest()[:40]
+    for _ in range(10 * 1000):  # 10 thousand attempts
+        items = (random.randint(0, 10**9), os.getpid(), origfname, time.time())
+        xx = DIGESTCLASS(str(items).encode("UTF-8")).hexdigest()[:40]
         randompart = f".{xx}.temp"
         ret = os.path.join(dpath, root + randompart + ".zst")
         if os.path.exists(ret):
             continue
         return ret
+    raise RuntimeError("failed to create a temporary filename")
 
 
 def create_goal_filename(origfname: str) -> str:
