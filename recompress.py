@@ -1,5 +1,4 @@
 import subprocess
-import humanize
 import random
 import shlex
 import hashlib
@@ -21,7 +20,15 @@ print(f"using {DIGESTCLASS} as the hashing algorithm")
 
 
 def pretty_filesize(fsize: int) -> str:
-    return humanize.naturalsize(fsize, True)
+    if fsize == 1:
+        return "1 Byte"
+    if fsize < 1024:
+        return f"{fsize} Bytes"
+    if fsize < 1024 * 1024:
+        return f"{fsize / 1024:.1f} KiB"
+    if fsize < 1024 * 1024 * 1024:
+        return f"{fsize / (1024 * 1024):.1f} MiB"
+    return f"{fsize / (1024 * 1024 * 1024):.1f} GiB"
 
 
 def getdigest(fname: str) -> str:
