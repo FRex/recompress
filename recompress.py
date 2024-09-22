@@ -76,6 +76,8 @@ gzipjob = subprocess.Popen(args1, stdout=subprocess.PIPE)
 args2 = ["zstd", "--quiet", "-o", tempfname]
 zstdjob = subprocess.Popen(args2, stdin=subprocess.PIPE)
 
+print(f"running: {shlex.join(args1)} | {shlex.join(args2)}")
+
 digest = DIGESTCLASS()
 
 rawsize = 0
@@ -105,14 +107,21 @@ if broken:
     sys.exit(1)
 
 okay = check_hashes(digest.hexdigest(), gzfname, tempfname)
-if okay:
-    print("All hashes match!")
+if not okay:
+    print("Some hashes mismatch - quitting.")
+    sys.exit(2)
+
+print("All hashes match!")
 
 gzsize = os.path.getsize(gzfname)
 zssize = os.path.getsize(tempfname)
 
+print(f"renaming {tempfname} to {finalname}")
 os.rename(tempfname, finalname)
 
 print(f"Raw data size is:  {pretty_filesize(rawsize)}")
 print(f"Original size was: {pretty_filesize(gzsize)} in {gzfname}")
 print(f"Repacked size is:  {pretty_filesize(zssize)} in {finalname}")
+print(
+    f"Ratio: {100 * gzsize / rawsize:.3f}% -> {100 * zssize / rawsize:.3f}% ({gzsize / zssize:.2f}x better)"
+)
