@@ -58,7 +58,21 @@ def create_goal_filename(origfname: str) -> str:
     return os.path.join(dpath, root + ".zst")
 
 
-gzfname = sys.argv[1]
+def extract_argument(args: list, arg: str) -> int:
+    ret = args.count(arg)
+    while arg in args:
+        args.remove(arg)
+    return ret
+
+
+args = sys.argv[1:]
+
+rm = extract_argument(args, "--rm")
+if len(args) != 1:
+    print(f"more than one argument left among: {repr(args)}")
+    sys.exit(1)
+
+gzfname = args[0]
 
 
 original_extension = os.path.splitext(gzfname)[1]
@@ -72,7 +86,7 @@ if original_extension not in KNOWN_EXTENSIONS:
 
 finalname = create_goal_filename(gzfname)
 if os.path.exists(finalname):
-    print(f"{finalname} already exists")
+    print(f"{finalname} already exists - quitting.")
     sys.exit(1)
 
 
@@ -135,3 +149,9 @@ print(f"Repacked size is:  {pretty_filesize(zssize)} in {finalname}")
 print(
     f"Ratio: {100 * gzsize / rawsize:.3f}% -> {100 * zssize / rawsize:.3f}% ({gzsize / zssize:.2f}x better)"
 )
+
+if rm:
+    print(f"removing {gzfname}")
+    os.remove(gzfname)
+
+print("All done.")
