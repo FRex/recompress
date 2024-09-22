@@ -60,6 +60,16 @@ def create_goal_filename(origfname: str) -> str:
 
 gzfname = sys.argv[1]
 
+
+original_extension = os.path.splitext(gzfname)[1]
+
+KNOWN_EXTENSIONS = (".gz",)
+
+if original_extension not in KNOWN_EXTENSIONS:
+    print(f"unknown extension: {original_extension}")
+    sys.exit(1)
+
+
 finalname = create_goal_filename(gzfname)
 if os.path.exists(finalname):
     print(f"{finalname} already exists")
@@ -88,8 +98,8 @@ while True:
         break
 
     rawsize += len(data)
-    digest.update(data)
-    zstdjob.stdin.write(data)
+    zstdjob.stdin.write(data)  # give that data to zstd comrpessor first
+    digest.update(data)  # hash in our process second
 
 
 gzjobret = gzipjob.wait()
@@ -111,7 +121,7 @@ if not okay:
     print("Some hashes mismatch - quitting.")
     sys.exit(2)
 
-print("All hashes match!")
+print("All (pipe, original and new file) hashes match!")
 
 gzsize = os.path.getsize(gzfname)
 zssize = os.path.getsize(tempfname)
