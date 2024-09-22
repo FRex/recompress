@@ -7,10 +7,17 @@ import time
 import sys
 import os
 
-import blake3
 
-DIGESTCLASS = blake3.blake3
-DIGESTCLASS: object
+try:
+    import blake3
+
+    DIGESTCLASS = blake3.blake3
+except ImportError:
+    import hashlib
+
+    DIGESTCLASS = hashlib.sha512
+
+print(f"using {DIGESTCLASS} as the hashing algorithm")
 
 
 def pretty_filesize(fsize: int) -> str:
@@ -69,7 +76,7 @@ args = sys.argv[1:]
 
 rm = extract_argument(args, "--rm")
 if len(args) != 1:
-    print(f"more than one argument left among: {repr(args)}")
+    print(f"not exactly one argument left among: {repr(args)}")
     sys.exit(1)
 
 gzfname = args[0]
