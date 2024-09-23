@@ -119,6 +119,8 @@ def main():
 
     tempfname = create_temp_filename(gzfname)
 
+    start_time = time.time()
+
     args1 = ["zstd", "-d", "--stdout", gzfname]
     gzipjob = subprocess.Popen(args1, stdout=subprocess.PIPE)
 
@@ -144,6 +146,9 @@ def main():
 
     gzjobret = gzipjob.wait()
     zsjobret = zstdjob.wait()
+
+    end_time = time.time()
+    print(f"Decompression, hashing and recompression took {end_time - start_time:.2f} seconds")
 
     broken = False
     if gzjobret != 0:
