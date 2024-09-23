@@ -80,6 +80,11 @@ def extract_argument(args: list, arg: str) -> int:
     return ret
 
 
+def myshlexjoin(parts) -> str:
+    """Same as shlex.join from 3.8+ using only shlex.quote from Python 3.3+"""
+    return " ".join(map(shlex.quote, parts))
+
+
 def main():
     args = sys.argv[1:]
 
@@ -111,7 +116,7 @@ def main():
     args2 = ["zstd", "--quiet", "-o", tempfname]
     zstdjob = subprocess.Popen(args2, stdin=subprocess.PIPE)
 
-    print(f"running: {shlex.join(args1)} | {shlex.join(args2)}")
+    print(f"running: {myshlexjoin(args1)} | {myshlexjoin(args2)}")
 
     digest = DIGESTCLASS()
 
@@ -131,10 +136,10 @@ def main():
 
     broken = False
     if gzjobret != 0:
-        print(f"{shlex.join(gzipjob.args)} returned non-zero status: {gzjobret}")
+        print(f"{myshlexjoin(gzipjob.args)} returned non-zero status: {gzjobret}")
         broken = True
     if zsjobret != 0:
-        print(f"{shlex.join(zstdjob.args)} returned non-zero status: {zsjobret}")
+        print(f"{myshlexjoin(zstdjob.args)} returned non-zero status: {zsjobret}")
         broken = True
 
     if broken:
