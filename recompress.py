@@ -80,93 +80,92 @@ def extract_argument(args: list, arg: str) -> int:
     return ret
 
 
-args = sys.argv[1:]
+def main():
+    args = sys.argv[1:]
 
-rm = extract_argument(args, "--rm")
-if len(args) != 1:
-    print(f"not exactly one argument left among: {repr(args)}")
-    sys.exit(1)
+    rm = extract_argument(args, "--rm")
+    if len(args) != 1:
+        print(f"not exactly one argument left among: {repr(args)}")
+        sys.exit(1)
 
-gzfname = args[0]
+    gzfname = args[0]
+
+    original_extension = os.path.splitext(gzfname)[1]
+
+    KNOWN_EXTENSIONS = (".gz",)
+
+    if original_extension not in KNOWN_EXTENSIONS:
+        print(f"unknown extension: {original_extension}")
+        sys.exit(1)
+
+    finalname = create_goal_filename(gzfname)
+    if os.path.exists(finalname):
+        print(f"{finalname} already exists - quitting.")
+        sys.exit(1)
+
+    tempfname = create_temp_filename(gzfname)
+
+    args1 = ["zstd", "-d", "--stdout", gzfname]
+    gzipjob = subprocess.Popen(args1, stdout=subprocess.PIPE)
+
+    args2 = ["zstd", "--quiet", "-o", tempfname]
+    zstdjob = subprocess.Popen(args2, stdin=subprocess.PIPE)
+
+    print(f"running: {shlex.join(args1)} | {shlex.join(args2)}")
+
+    digest = DIGESTCLASS()
+
+    rawsize = 0
+    while True:
+        data = gzipjob.stdout.read(64 * 1024)
+        if not data:
+            zstdjob.stdin.close()  # need to close stdin to make zstd process end
+            break
+
+        rawsize += len(data)
+        zstdjob.stdin.write(data)  # give that data to zstd comrpessor first
+        digest.update(data)  # hash in our process second
+
+    gzjobret = gzipjob.wait()
+    zsjobret = zstdjob.wait()
+
+    broken = False
+    if gzjobret != 0:
+        print(f"{shlex.join(gzipjob.args)} returned non-zero status: {gzjobret}")
+        broken = True
+    if zsjobret != 0:
+        print(f"{shlex.join(zstdjob.args)} returned non-zero status: {zsjobret}")
+        broken = True
+
+    if broken:
+        sys.exit(1)
+
+    okay = check_hashes(digest.hexdigest(), gzfname, tempfname)
+    if not okay:
+        print("Some hashes mismatch - quitting.")
+        sys.exit(2)
+
+    print("All (pipe, original and new file) hashes match!")
+
+    gzsize = os.path.getsize(gzfname)
+    zssize = os.path.getsize(tempfname)
+
+    print(f"renaming {tempfname} to {finalname}")
+    os.rename(tempfname, finalname)
+
+    print(f"Raw data size is:  {pretty_filesize(rawsize)}")
+    print(f"Original size was: {pretty_filesize(gzsize)} in {gzfname}")
+    print(f"Repacked size is:  {pretty_filesize(zssize)} in {finalname}")
+    print(
+        f"Ratio: {100 * gzsize / rawsize:.3f}% -> {100 * zssize / rawsize:.3f}% ({gzsize / zssize:.2f}x better)"
+    )
+
+    if rm:
+        print(f"removing {gzfname}")
+        os.remove(gzfname)
+
+    print("All done.")
 
 
-original_extension = os.path.splitext(gzfname)[1]
-
-KNOWN_EXTENSIONS = (".gz",)
-
-if original_extension not in KNOWN_EXTENSIONS:
-    print(f"unknown extension: {original_extension}")
-    sys.exit(1)
-
-
-finalname = create_goal_filename(gzfname)
-if os.path.exists(finalname):
-    print(f"{finalname} already exists - quitting.")
-    sys.exit(1)
-
-
-tempfname = create_temp_filename(gzfname)
-
-
-args1 = ["zstd", "-d", "--stdout", gzfname]
-gzipjob = subprocess.Popen(args1, stdout=subprocess.PIPE)
-
-
-args2 = ["zstd", "--quiet", "-o", tempfname]
-zstdjob = subprocess.Popen(args2, stdin=subprocess.PIPE)
-
-print(f"running: {shlex.join(args1)} | {shlex.join(args2)}")
-
-digest = DIGESTCLASS()
-
-rawsize = 0
-while True:
-    data = gzipjob.stdout.read(64 * 1024)
-    if not data:
-        zstdjob.stdin.close()  # need to close stdin to make zstd process end
-        break
-
-    rawsize += len(data)
-    zstdjob.stdin.write(data)  # give that data to zstd comrpessor first
-    digest.update(data)  # hash in our process second
-
-
-gzjobret = gzipjob.wait()
-zsjobret = zstdjob.wait()
-
-broken = False
-if gzjobret != 0:
-    print(f"{shlex.join(gzipjob.args)} returned non-zero status: {gzjobret}")
-    broken = True
-if zsjobret != 0:
-    print(f"{shlex.join(zstdjob.args)} returned non-zero status: {zsjobret}")
-    broken = True
-
-if broken:
-    sys.exit(1)
-
-okay = check_hashes(digest.hexdigest(), gzfname, tempfname)
-if not okay:
-    print("Some hashes mismatch - quitting.")
-    sys.exit(2)
-
-print("All (pipe, original and new file) hashes match!")
-
-gzsize = os.path.getsize(gzfname)
-zssize = os.path.getsize(tempfname)
-
-print(f"renaming {tempfname} to {finalname}")
-os.rename(tempfname, finalname)
-
-print(f"Raw data size is:  {pretty_filesize(rawsize)}")
-print(f"Original size was: {pretty_filesize(gzsize)} in {gzfname}")
-print(f"Repacked size is:  {pretty_filesize(zssize)} in {finalname}")
-print(
-    f"Ratio: {100 * gzsize / rawsize:.3f}% -> {100 * zssize / rawsize:.3f}% ({gzsize / zssize:.2f}x better)"
-)
-
-if rm:
-    print(f"removing {gzfname}")
-    os.remove(gzfname)
-
-print("All done.")
+if __name__ == "__main__":
+    main()
