@@ -170,9 +170,11 @@ def main():
     print(f"Raw data size is:  {pretty_filesize(rawsize)}")
     print(f"Original size was: {pretty_filesize(gzsize)} in {gzfname}")
     print(f"Repacked size is:  {pretty_filesize(zssize)} in {finalname}")
-    print(
-        f"Ratio: {100 * gzsize / rawsize:.3f}% -> {100 * zssize / rawsize:.3f}% ({gzsize / zssize:.2f}x better)"
-    )
+
+    gzpercent = 100 * gzsize / rawsize
+    zspercent = 100 * zssize / rawsize
+    better = gzsize / zssize
+    print(f"Ratio: {gzpercent:.3f}% -> {zspercent:.3f}% ({better:.2f}x better)")
 
     if rm:
         print(f"removing {gzfname}")
