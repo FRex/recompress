@@ -34,7 +34,16 @@ def pretty_filesize(fsize: int) -> str:
 def getdigest(fname: str) -> str:
     args = ["zstd", "-d", "--stdout", fname]
     with subprocess.Popen(args, stdout=subprocess.PIPE) as job:
-        return hashlib.file_digest(job.stdout, DIGESTCLASS).hexdigest()
+        # NOTE: not using hashlib.file_digest since it's only in 3.11+
+        digest = DIGESTCLASS()
+        buffer = bytearray(64 * 1024)
+        memview = memoryview(buffer)
+        while True:
+            readc = job.stdout.readinto(buffer)
+            if readc == 0:
+                break
+            digest.update(memview[:readc])
+        return digest.hexdigest()
 
 
 def check_hashes(rawdigest: str, fname1: str, fname2: str) -> bool:
