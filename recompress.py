@@ -128,17 +128,19 @@ def main():
     print(f"running: {myshlexjoin(args1)} | {myshlexjoin(args2)}")
 
     digest = DIGESTCLASS()
-
     rawsize = 0
+    buffer = bytearray(64 * 1024)
+    memview = memoryview(buffer)
     while True:
-        data = gzipjob.stdout.read(64 * 1024)
-        if not data:
+        readc = gzipjob.stdout.readinto(buffer)
+        if readc == 0:
             zstdjob.stdin.close()  # need to close stdin to make zstd process end
             break
 
-        rawsize += len(data)
-        zstdjob.stdin.write(data)  # give that data to zstd comrpessor first
-        digest.update(data)  # hash in our process second
+        rawsize += readc
+        mv = memview[:readc]
+        zstdjob.stdin.write(mv)  # give that data to zstd comrpessor first
+        digest.update(mv)  # hash in our process second
 
     gzjobret = gzipjob.wait()
     zsjobret = zstdjob.wait()
