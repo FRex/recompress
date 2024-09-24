@@ -177,9 +177,6 @@ def main():
     gzsize = os.path.getsize(gzfname)
     zssize = os.path.getsize(tempfname)
 
-    print(f"renaming {tempfname} to {finalname}")
-    os.rename(tempfname, finalname)
-
     print(f"Raw data size is:  {pretty_filesize(rawsize)}")
     print(f"Original size was: {pretty_filesize(gzsize)} in {gzfname}")
     print(f"Repacked size is:  {pretty_filesize(zssize)} in {finalname}")
@@ -189,9 +186,16 @@ def main():
     better = gzsize / zssize
     print(f"Ratio: {gzpercent:.3f}% -> {zspercent:.3f}% ({better:.2f}x better)")
 
-    if rm:
-        print(f"removing {gzfname}")
-        os.remove(gzfname)
+    if gzsize <= zssize:
+        # TODO: should this maybe be done only if --rm flag was passed?
+        print(f"New file is bigger, deleting temporary file {tempfname}")
+        os.remove(tempfname)
+    else:
+        print(f"renaming temporary file {tempfname} to {finalname}")
+        os.rename(tempfname, finalname)
+        if rm:
+            print(f"removing original {gzfname}")
+            os.remove(gzfname)
 
     print("All done.")
 
