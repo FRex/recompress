@@ -148,7 +148,9 @@ def main():
     zsjobret = zstdjob.wait()
 
     end_time = time.time()
-    print(f"Decompression, hashing and recompression took {end_time - start_time:.2f} seconds")
+    print(
+        f"Decompression, hashing and recompression took {end_time - start_time:.2f} seconds"
+    )
 
     broken = False
     if gzjobret != 0:
@@ -161,7 +163,11 @@ def main():
     if broken:
         sys.exit(1)
 
+    hash_start = time.time()
     okay = check_hashes(digest.hexdigest(), gzfname, tempfname)
+    hash_end = time.time()
+    print(f"Hashing two decompressed files took {hash_end - hash_start:.2f} seconds")
+
     if not okay:
         print("Some hashes mismatch - quitting.")
         sys.exit(2)
